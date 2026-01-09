@@ -86,9 +86,17 @@ export default defineConfig(({ mode }): UserConfig & Pick<ViteUserConfig, 'test'
         },
         output: {
           entryFileNames({ name }) {
-            if (name.includes('headless') || env.VITE_DISABLE_BUILD_HASH) {
+            // ✅ For the headless/loader build, force a stable root entry: /index.js
+            if (name.includes('headless')) {
+              return 'index.js';
+            }
+
+            // ✅ Optional: if you disable hashing globally, keep stable names for everything
+            if (env.VITE_DISABLE_BUILD_HASH) {
               return '[name].js';
             }
+
+            // Default: hashed filenames for normal builds
             return '[name].[hash].js';
           },
           experimentalMinChunkSize: 10_000,
@@ -111,12 +119,14 @@ export default defineConfig(({ mode }): UserConfig & Pick<ViteUserConfig, 'test'
           chunkFileNames(chunk) {
             if (chunk.name === 'index' && chunk.facadeModuleId) {
               const folderName = path.basename(path.dirname(chunk.facadeModuleId));
-
-              return `chunks/${folderName}.[hash].js`;
+              return `assets/chunks/${folderName}.[hash].js`;
             }
 
-            return `chunks/[name].[hash].js`;
+            return `assets/chunks/[name].[hash].js`;
           },
+
+          // Also ensure non-JS assets land under /assets
+          assetFileNames: 'assets/[name].[hash][extname]',
         },
         onwarn(warning, warn) {
           if (warning.code === 'MODULE_LEVEL_DIRECTIVE') {
